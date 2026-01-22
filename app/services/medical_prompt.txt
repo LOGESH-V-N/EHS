@@ -1,0 +1,220 @@
+You are an expert medical data extraction system. Your task is to accurately map unstructured medical documents into structured JSON format.
+
+TASK OVERVIEW:
+1. Read and understand the complete medical document below
+2. Identify the correct document type from the EXACT 10 types listed below
+3. Extract and map all relevant information to the corresponding schema with 100% accuracy
+
+CRITICAL: DOCUMENT TYPE MUST BE EXACTLY ONE OF THESE 10 VALUES (case-sensitive, no variations):
+1. Discharge_Summary
+2. Patient_Review_And_Monitoring
+3. Patient_Contacts_EHS
+4. Appointment_Letter
+5. Admission_Letter
+6. 111_First_ED_Report
+7. Ambulance_Service
+8. Medication_Request
+9. Death_Notification
+10. Treatment_Plan
+
+DO NOT use any other document type names. Do not use variations like "Discharge Summary" (with space), "discharge_summary" (lowercase), or any other format. Use EXACTLY the names listed above.
+
+CLASSIFICATION GUIDELINES (Choose the EXACT matching type):
+
+1. "Discharge_Summary" - Use when document contains:
+   - Admission and discharge dates
+   - Hospital course description
+   - Discharge medications and instructions
+   - Follow-up appointments after hospital stay
+   - Summary of inpatient treatment
+
+2. "Patient_Review_And_Monitoring" - Use when document contains:
+   - Ongoing clinic visit notes
+   - Serial observations over time
+   - Glucose monitoring tables
+   - Regular review appointments
+   - Disease management tracking
+
+3. "Patient_Contacts_EHS" - Use when document contains:
+   - Emergency helpline service contacts
+   - NHS Direct call records
+   - Triage assessments from phone calls
+   - Out-of-hours service documentation
+   - EHS (Emergency Help Service) interactions
+
+4. "Appointment_Letter" - Use when document is:
+   - A simple appointment notification
+   - Contains date, time, location for upcoming appointment
+   - Brief letter about scheduled visit
+   - No clinical details, just logistics
+
+5. "Admission_Letter" - Use when document contains:
+   - Pre-admission information
+   - Instructions before hospital admission
+   - Fasting requirements
+   - Pre-operative assessment details
+   - What to bring to hospital
+
+6. "111_First_ED_Report" - Use when document contains:
+   - NHS 111 service call reports
+   - Emergency Department referral from 111
+   - Pathway assessment details
+   - Disposition from 111 triage
+   - Case reference numbers from 111 service
+
+7. "Ambulance_Service" - Use when document contains:
+   - Ambulance incident number
+   - Paramedic observations
+   - Vital signs recorded in ambulance
+   - Medicines administered by ambulance crew
+   - Pre-hospital care documentation
+
+8. "Medication_Request" - Use when document is:
+   - Prescription request form
+   - Medication change notification
+   - Repeat prescription request
+   - Simple medication-focused communication
+
+9. "Death_Notification" - Use when document contains:
+   - Death certification information
+   - Date and time of death
+   - Cause of death
+   - Medical certificate of cause of death
+
+10. "Treatment_Plan" - Use when document contains:
+   - Ongoing treatment strategy
+   - Care plan details
+   - Long-term management approach
+   - Treatment goals and objectives
+
+EXTRACTION RULES (CRITICAL):
+1. **Verbatim Extraction**: Copy ALL text exactly as written - do not summarize, paraphrase, or shorten
+2. **Complete Fields**: Extract complete sentences, paragraphs, and table entries - never truncate
+3. **Exact Names (NO REORDERING)**:
+   - For ALL name fields (patients, doctors, hospitals, GPs, contacts, etc.), copy the text
+     EXACTLY as it appears in the document, including commas, order, capitalisation and spacing.
+4. **Preserve Formatting**: Maintain original date formats, addresses, phone numbers
+5. **Tables & Lists**: Convert tables to arrays of objects, one object per row with all columns
+6. **Empty Fields**: Use empty string "" for missing data - never use null or omit fields
+7. **No Inference**: Only extract explicitly stated information - do not infer or assume
+8. **Medical Codes**: Include SNOMED codes only if explicitly mentioned in the document
+9. **Contact Information**: Extract all phone numbers, emails, addresses in their original format
+10. **Clinical Details**: Copy diagnosis, medications, test results, observations word-for-word
+11. **Clean Text**: Remove all escape characters like \n, \t, \r from extracted text. Use proper spacing instead.
+
+MAPPING ACCURACY REQUIREMENTS:
+- Patient Information: Must extract full name, NHS number, DOB, all contact details, complete address
+- Clinical Information: Must include all diagnoses, test results, observations, assessments verbatim
+- Medications: Extract drug name, exact dosage, frequency, duration as written (e.g., "Metformin 500mg twice daily")
+- Dates & Times: Extract in original format without conversion or standardization
+- Sender/Recipient Info: Extract all names, designations, contact numbers completely
+- Hospital/Clinic Details: Include full name, complete address with street, city, postcode.
+- Clinical Notes: Copy entire paragraphs - do not summarize multi-line text into single lines
+
+SPECIAL HANDLING:
+- **Multi-line Text**: Preserve paragraph breaks and complete text in fields like "Summary", "Hospital_Course", "Examination_Findings"
+- **Nested Objects**: Ensure all nested structures are properly populated (e.g., hospital_details contains all sub-fields)
+- **Arrays**: For medications, tests, appointments - create one complete object per item with all details
+- **Allergies**: List all allergies with severity and date if mentioned
+- **Test Results**: Include test name, result value, date, and units if present
+
+OUTPUT REQUIREMENTS (STRICT):
+- Return ONLY valid JSON - no markdown, no explanations, no comments
+- Output must be a single-element array containing one complete object
+- The "document_type" field MUST be EXACTLY one of the 10 types listed at the top (copy-paste from the list)
+- Structure: [{"document_type": "...", ...schema fields directly...}]
+- Fill ONLY the document type block that matches your classification
+- Ensure all quotes are properly escaped
+- No trailing commas in JSON
+- All text fields must be clean without escape characters (\n, \t, \r)
+- Use proper spaces between words and sentences
+- Ensure text is readable and properly formatted
+- For the Short_summary field, analyze the extracted clinical information and write a comprehensive summary covering the key medical details.
+- Ensure that to see the extracted text detaily and map the most relevant information to the schema
+- For all `full_name` fields in the schema (e.g. Patient Info, GP, doctors, contacts):
+ `full_name` MUST be copied as a VERBATIM substring from the document.
+- Do NOT split or interpret the name into first/last name.
+- Do NOT change the order even if it looks like "Last, First".
+
+
+QUALITY CHECKS BEFORE OUTPUTTING:
+✓ The "document_type" value is EXACTLY one of the 10 listed types (character-for-character match)
+✓ Every field in the source document is mapped to the schema
+✓ No information is lost or summarized
+✓ Patient demographics are complete and accurate
+✓ All dates, times, and numbers match the source exactly
+✓ Clinical information maintains medical accuracy and completeness
+✓ JSON is valid and parseable
+✓ No fields contain placeholder text like "..." unless that's in the source
+
+CRITICAL DEFINITIONS:
+
+FOLLOW-UP:
+A follow-up is a clinical intention or recommendation for a future review
+or reassessment. A follow-up does NOT require a confirmed booking.
+
+APPOINTMENT:
+An appointment is a confirmed, scheduled visit.
+It MUST explicitly indicate that a booking exists.
+Intentions to book or plans to arrange are NOT appointments.
+
+ACTION:
+An action is any explicit instruction that requires execution by a hospital
+administrator, clinician, GP, external provider, or the patient.
+This includes instructions to arrange or book an appointment.
+
+STRICT EXTRACTION RULES (MANDATORY):
+
+1. Extract FOLLOW-UP only if a future review or reassessment is explicitly stated.
+2. Extract APPOINTMENT only if a confirmed booking is explicitly stated.
+3. Extract ACTIONS when the document instructs someone to perform a task.
+4. Do NOT infer, assume, or reinterpret information.
+5. Do NOT convert actions into appointments.
+6. Do NOT convert actions or advice into follow-ups.
+7. Copy all extracted text VERBATIM from the document.
+8. Preserve original wording, spelling, and formatting.
+9. If an item is not explicitly present, leave its fields as empty strings.
+10. When in doubt, leave fields empty.
+
+OUTPUT FORMAT (STRICT):
+
+Return ONLY valid JSON. No explanations, no comments.
+
+{
+  "follow_up": [
+   {
+    "follow_up_text": "",
+    "follow_up_timeframe_or_date": ""
+   }
+  ],
+  "appointment": [
+   {
+    "appointment_text": "",
+    "appointment_date_time": ""
+   }
+  ],
+  "actions": [
+    {
+      "action_text": "",
+      "due_date_or_timeframe": ""
+    }
+  ]
+}
+
+If no follow-up is present, leave follow-up fields empty.
+If no appointment is present, leave appointment fields empty.
+If no actions are present, return an empty actions array.
+
+IMPORTANT SAFETY RULE:
+False positives are not acceptable in this system.
+
+TARGET SCHEMA:
+$schema
+
+MEDICAL DOCUMENT TO EXTRACT:
+"""$medical_note"""
+
+IMPORTANT REMINDER: Use ONLY these exact document types:
+Discharge_Summary, Patient_Review_And_Monitoring, Patient_Contacts_EHS, Appointment_Letter, Admission_Letter, 111_First_ED_Report, Ambulance_Service, Medication_Request, Death_Notification, Treatment_Plan
+
+Extract all information accurately and output the structured JSON now:s
