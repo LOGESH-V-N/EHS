@@ -164,7 +164,7 @@ def load_prompt(medical_note):
     prompt_path = os.path.join(
         current_app.root_path,   # points to /app
         "services",
-        "med2.txt"     # your actual files
+        "medical_prompt.txt"     # your actual files
     )
 
     if not os.path.exists(prompt_path):
@@ -414,5 +414,6 @@ def extract_document_type(cohere_result: dict) -> str:
         or cohere_result.get("doc_type")
         or "UNKNOWN"
     )
+
 
 
