@@ -26,6 +26,10 @@ class User(db.Model):
     otp = db.Column(db.Integer)
     otp_expiry = db.Column(db.DateTime)
     otp_verified = db.Column(db.Integer, default=0)
+    failed_login_attempts = db.Column(db.Integer, default=0)
+    otp_failed_attempts = db.Column(db.Integer, default=0)
+    otp_resend_locked_until = db.Column(db.DateTime)
+    last_login_at = db.Column(db.DateTime)
 
 
     def set_password(self, password):

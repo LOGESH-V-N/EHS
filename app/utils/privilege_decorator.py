@@ -1,10 +1,19 @@
 from functools import wraps
-from flask import request, jsonify,g
-from jwt import ExpiredSignatureError, InvalidTokenError
+import datetime
 import jwt
+from flask import request, jsonify, g, current_app
+from jwt import ExpiredSignatureError, InvalidTokenError
 
-JWT_SECRET = "MY_JWT_SECRET_KEY_123"  # JWT secret
+from app.extensions import db
+from app.models.user import User
+
+JWT_SECRET = "MY_JWT_SECRET_KEY_123"
 JWT_ALGO = "HS256"
+
+
+def _utcnow():
+    return datetime.datetime.utcnow()
+
 
 def decode_jwt():
     token = request.headers.get("Authorization")
@@ -15,13 +24,36 @@ def decode_jwt():
         }
 
     try:
-        _, jwt_token = token.split(" ")  # Bearer <jwt>
-
+        _, jwt_token = token.split(" ")
         decoded = jwt.decode(
             jwt_token,
             JWT_SECRET,
             algorithms=[JWT_ALGO]
         )
+
+        user = User.query.filter_by(uid=decoded.get("uid")).first()
+        if not user:
+            return None, {
+                "status": 0,
+                "message": "User not found"
+            }
+
+        if user.status == 1:
+            return None, {
+                "status": 0,
+                "message": "Account is locked/inactive. Please contact admin."
+            }
+
+        timeout_minutes = current_app.config.get("SESSION_IDLE_TIMEOUT_MINUTES", 30)
+        now = _utcnow()
+        if user.last_login_at and now - user.last_login_at > datetime.timedelta(minutes=timeout_minutes):
+            return None, {
+                "status": 0,
+                "message": "Session timed out due to inactivity. Please login again."
+            }
+
+        user.last_login_at = now
+        db.session.commit()
         return decoded, None
 
     except ExpiredSignatureError:
@@ -55,15 +87,11 @@ def require_privilege(role=None):
             user_id = decoded.get("uid")
             rules = decoded.get("rules", {})
             resource_access = rules.get("resource_access")
-
-            # 🔐 Always set g.user_id once JWT is valid
             g.user_id = user_id
 
-            # ADMIN → full access
             if resource_access == 1:
                 return f(*args, **kwargs)
 
-            # USER
             if resource_access == 2:
                 if role == "ADMIN":
                     return jsonify({
@@ -80,40 +108,3 @@ def require_privilege(role=None):
 
         return wrapper
     return decorator
-
-
-'''def require_privilege(privilege=None):
-    def decorator(f):
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            decoded, error = decode_jwt()
-            if error:
-                return jsonify(error), 401
-
-            rules = decoded.get("rules", {})
-            print(decoded)
-            resource_access = rules.get("resource_access")
-            privileges = rules.get("privileges", [])
-
-            # Normalize privileges for comparison
-            normalized_privileges = [p.upper().replace(" ", "_") for p in privileges]
-            normalized_required = privilege.strip().upper().replace(" ", "_") if privilege else None
-
-            # Role type 1 → full access
-            if resource_access == 1:
-                return f(*args, **kwargs)
-
-            # Role type 2 → must have privilege
-            if resource_access == 2:
-                if normalized_required and normalized_required not in normalized_privileges:
-                    return jsonify({
-                        "status": 0,
-                        "message": f"You do not have privilege: {privilege}"
-                    }), 403
-                return f(*args, **kwargs)
-
-            return jsonify({"status": 0, "message": "Invalid role_type"}), 403
-
-        return wrapper
-    return decorator
-'''
