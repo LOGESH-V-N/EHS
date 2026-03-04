@@ -113,7 +113,8 @@ schema = """
 		"follow_up": [
 			{
 				"follow_up_text": "",
-				"follow_up_timeframe_or_date": ""
+				"follow_up_timeframe_or_date": "",
+				"snomed_code": ""
 			}
 		],
 		"appointment": [
@@ -130,4 +131,5 @@ schema = """
 		]
 	}
 }
+
 """
