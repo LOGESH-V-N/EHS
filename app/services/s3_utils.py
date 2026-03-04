@@ -440,6 +440,7 @@ def snomed_mapping(cohere_result):
     """
     service = cohere_result.get("structured_output", [])[0]
     overview = service.get("clinical_info", {})
+    actions = service.get("actions", {})
     print("overview", overview)
     
     # Problems
@@ -503,6 +504,13 @@ def snomed_mapping(cohere_result):
         snomed_data = fetch_snomed_code(diag.get("diagnosis_name"))
         diag["snomed_code"] = snomed_data["code"]
         diag["snomed_term"] = snomed_data["term"]
+
+    # follow up
+    follow_up = actions.get("follow_up", [])
+    for follow in follow_up:
+        snomed_data = fetch_snomed_code(follow.get("follow_up_text"))
+        follow["snomed_code"] = snomed_data["code"]
+        follow["snomed_term"] = snomed_data["term"]
     
     print("result", cohere_result)
     return cohere_result
@@ -586,6 +594,12 @@ def storing_patient_info(cohere_result,doc):
        
         if not mobile_number or mobile_number=="[redacted]":
             mobile_number=None
+        dob=patient_info_dict.get("date_of_birth","")
+        if not dob or dob=="[redacted]":
+            dob=None
+        sex=patient_info_dict.get("gender","")
+        if not sex or sex=="[redacted]":
+            sex=None
         patient_tbl_id=DocumentListSchema.query.filter_by(nhs_no=nhs_number).first()
       
         if patient_tbl_id:
@@ -595,7 +609,7 @@ def storing_patient_info(cohere_result,doc):
 
 
         else:   
-            pf=DocumentListSchema(doc_id=doc.doc_id,patient_name=full_name,nhs_no=nhs_number,phone_no=mobile_number)
+            pf=DocumentListSchema(doc_id=doc.doc_id,patient_name=full_name,nhs_no=nhs_number,phone_no=mobile_number,dob=dob,sex=sex)
             db.session.add(pf)
             db.session.commit()
             Document.query.filter_by(doc_id=doc.doc_id).update({
